@@ -1,17 +1,33 @@
+import java.io.IOException;
 import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
-public class Server {
+public class Server extends Thread {
+    private final int port;
     private final String path;
-    private final FileList fileList;
     private final ServerSocket serverSocket;
 
-    public Server(ServerSocket serverSocket, String path) {
+    public Server(int port, String path) throws IOException {
+        this.port = port;
+        this.serverSocket = new ServerSocket(port);
         this.path = path;
-        this.serverSocket = serverSocket;
-        this.fileList = new FileList(path);
+        this.start();
     }
 
-    public FileList getFileList() {
-        return fileList;
+    @Override
+    public synchronized void start() {
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(64);
+        while (true) {
+            Socket socket = null;
+            try {
+                socket = serverSocket.accept();
+                Client client = new Client(socket, path);
+                executor.submit(client);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
