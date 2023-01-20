@@ -6,13 +6,13 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 public class Server extends Thread {
     private final int port;
-    private final String path;
     private final ServerSocket serverSocket;
+    private final FileList fileList;
 
     public Server(int port, String path) throws IOException {
         this.port = port;
         this.serverSocket = new ServerSocket(port);
-        this.path = path;
+        this.fileList = new FileList(path);
         this.start();
     }
 
@@ -20,13 +20,12 @@ public class Server extends Thread {
     public synchronized void start() {
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(64);
         while (true) {
-            Socket socket = null;
             try {
-                socket = serverSocket.accept();
-                Client client = new Client(socket, path);
-                executor.submit(client);
+                Socket socket = serverSocket.accept();
+                ServerThread serverThread = new ServerThread(socket, fileList);
+                executor.execute(serverThread);
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                e.printStackTrace();
             }
         }
     }
